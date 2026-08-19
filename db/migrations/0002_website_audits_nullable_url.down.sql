@@ -1,0 +1,1 @@
+ALTER TABLE website_audits ALTER COLUMN url SET NOT NULL;

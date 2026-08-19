@@ -1,0 +1,14 @@
+DROP TABLE IF EXISTS idempotency_keys;
+DROP TABLE IF EXISTS api_call_log;
+DROP TABLE IF EXISTS state_transitions;
+DROP TABLE IF EXISTS webhook_events;
+DROP TABLE IF EXISTS bookings;
+DROP TABLE IF EXISTS replies;
+DROP TABLE IF EXISTS messages;
+DROP TABLE IF EXISTS campaigns;
+DROP TABLE IF EXISTS suppressions;
+DROP TABLE IF EXISTS email_verifications;
+DROP TABLE IF EXISTS contacts;
+DROP TABLE IF EXISTS qualifications;
+DROP TABLE IF EXISTS website_audits;
+DROP TABLE IF EXISTS companies;

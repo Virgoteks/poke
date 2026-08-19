@@ -1,0 +1,66 @@
+{
+  "name": "QUALIFY - deterministic rules + AI classification",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "hours", "hoursInterval": 1 }] } },
+      "id": "cron-trigger",
+      "name": "Hourly",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.CORE_API_BASE_URL}}/qualify/pending?limit=20",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-internal-api-key", "value": "={{$env.INTERNAL_API_KEY}}" }]
+        },
+        "options": { "timeout": 15000 }
+      },
+      "id": "fetch-pending",
+      "name": "GET /qualify/pending",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": { "fieldToSplitOut": "companies", "options": {} },
+      "id": "split-companies",
+      "name": "Split companies",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CORE_API_BASE_URL}}/qualify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-internal-api-key", "value": "={{$env.INTERNAL_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"companyId\": $json.id } }}",
+        "options": { "timeout": 30000 }
+      },
+      "id": "call-qualify",
+      "name": "POST /qualify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0]
+    }
+  ],
+  "connections": {
+    "Hourly": { "main": [[{ "node": "GET /qualify/pending", "type": "main", "index": 0 }]] },
+    "GET /qualify/pending": { "main": [[{ "node": "Split companies", "type": "main", "index": 0 }]] },
+    "Split companies": { "main": [[{ "node": "POST /qualify", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

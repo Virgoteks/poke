@@ -1,0 +1,137 @@
+{
+  "name": "FOLLOW UP + SAFE REPLY - scheduled sweep",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "hours", "hoursInterval": 1 }] }
+      },
+      "id": "schedule-trigger",
+      "name": "Hourly",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.CORE_API_BASE_URL}}/followup/pending?fromStage=initial&toStage=followup_1&hoursSince=48&limit=20",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-internal-api-key", "value": "={{$env.INTERNAL_API_KEY}}" }]
+        },
+        "options": { "timeout": 30000 }
+      },
+      "id": "get-followup-pending",
+      "name": "GET /followup/pending",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, -140]
+    },
+    {
+      "parameters": { "fieldToSplitOut": "contacts", "options": {} },
+      "id": "split-followup-contacts",
+      "name": "Split contacts",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [440, -140]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CORE_API_BASE_URL}}/personalize/message",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-internal-api-key", "value": "={{$env.INTERNAL_API_KEY}}" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contactId: $json.id, stage: \"followup_1\" }) }}",
+        "options": { "timeout": 30000 }
+      },
+      "id": "personalize-followup",
+      "name": "POST /personalize/message (followup_1)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, -140]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CORE_API_BASE_URL}}/send/message",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-internal-api-key", "value": "={{$env.INTERNAL_API_KEY}}" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messageId: $json.messageId }) }}",
+        "options": { "timeout": 30000 }
+      },
+      "id": "send-followup",
+      "name": "POST /send/message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, -140]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.CORE_API_BASE_URL}}/reply/pending-safe-response?limit=20",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-internal-api-key", "value": "={{$env.INTERNAL_API_KEY}}" }]
+        },
+        "options": { "timeout": 30000 }
+      },
+      "id": "get-safe-reply-pending",
+      "name": "GET /reply/pending-safe-response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 140]
+    },
+    {
+      "parameters": { "fieldToSplitOut": "replies", "options": {} },
+      "id": "split-replies",
+      "name": "Split replies",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [440, 140]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CORE_API_BASE_URL}}/reply/safe-response",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-internal-api-key", "value": "={{$env.INTERNAL_API_KEY}}" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ replyId: $json.id }) }}",
+        "options": { "timeout": 30000 }
+      },
+      "id": "post-safe-response",
+      "name": "POST /reply/safe-response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 140]
+    }
+  ],
+  "connections": {
+    "Hourly": {
+      "main": [
+        [
+          { "node": "GET /followup/pending", "type": "main", "index": 0 },
+          { "node": "GET /reply/pending-safe-response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "GET /followup/pending": { "main": [[{ "node": "Split contacts", "type": "main", "index": 0 }]] },
+    "Split contacts": { "main": [[{ "node": "POST /personalize/message (followup_1)", "type": "main", "index": 0 }]] },
+    "POST /personalize/message (followup_1)": { "main": [[{ "node": "POST /send/message", "type": "main", "index": 0 }]] },
+    "GET /reply/pending-safe-response": { "main": [[{ "node": "Split replies", "type": "main", "index": 0 }]] },
+    "Split replies": { "main": [[{ "node": "POST /reply/safe-response", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

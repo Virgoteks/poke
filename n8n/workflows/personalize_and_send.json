@@ -1,0 +1,121 @@
+{
+  "name": "PERSONALIZE + SEND - Instantly (dry-run safe)",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "hours", "hoursInterval": 1 }] } },
+      "id": "cron-trigger",
+      "name": "Hourly",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.CORE_API_BASE_URL}}/personalize/pending?limit=20",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-internal-api-key", "value": "={{$env.INTERNAL_API_KEY}}" }]
+        },
+        "options": { "timeout": 15000 }
+      },
+      "id": "fetch-pending-personalize",
+      "name": "GET /personalize/pending",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": { "fieldToSplitOut": "contacts", "options": {} },
+      "id": "split-contacts",
+      "name": "Split contacts",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CORE_API_BASE_URL}}/personalize/message",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-internal-api-key", "value": "={{$env.INTERNAL_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"contactId\": $json.id, \"stage\": \"initial\" } }}",
+        "options": { "timeout": 30000 }
+      },
+      "id": "call-personalize",
+      "name": "POST /personalize/message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.CORE_API_BASE_URL}}/send/pending?limit=20",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-internal-api-key", "value": "={{$env.INTERNAL_API_KEY}}" }]
+        },
+        "options": { "timeout": 15000 }
+      },
+      "id": "fetch-pending-send",
+      "name": "GET /send/pending",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 200]
+    },
+    {
+      "parameters": { "fieldToSplitOut": "messages", "options": {} },
+      "id": "split-messages",
+      "name": "Split messages",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [880, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CORE_API_BASE_URL}}/send/message",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-internal-api-key", "value": "={{$env.INTERNAL_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"messageId\": $json.id } }}",
+        "options": { "timeout": 30000 }
+      },
+      "id": "call-send",
+      "name": "POST /send/message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 200]
+    }
+  ],
+  "connections": {
+    "Hourly": {
+      "main": [
+        [
+          { "node": "GET /personalize/pending", "type": "main", "index": 0 },
+          { "node": "GET /send/pending", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "GET /personalize/pending": { "main": [[{ "node": "Split contacts", "type": "main", "index": 0 }]] },
+    "Split contacts": { "main": [[{ "node": "POST /personalize/message", "type": "main", "index": 0 }]] },
+    "GET /send/pending": { "main": [[{ "node": "Split messages", "type": "main", "index": 0 }]] },
+    "Split messages": { "main": [[{ "node": "POST /send/message", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

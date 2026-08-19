@@ -1,0 +1,54 @@
+{
+  "name": "PROCESS REPLY - Instantly reply webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "instantly-reply",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Instantly reply webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "instantly-reply"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CORE_API_BASE_URL}}/webhooks/instantly/reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-webhook-secret", "value": "={{$env.INSTANTLY_WEBHOOK_SECRET}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": { "timeout": 30000 }
+      },
+      "id": "forward-to-core-api",
+      "name": "POST /webhooks/instantly/reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": { "respondWith": "allIncomingItems", "options": {} },
+      "id": "respond",
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [440, 0]
+    }
+  ],
+  "connections": {
+    "Instantly reply webhook": { "main": [[{ "node": "POST /webhooks/instantly/reply", "type": "main", "index": 0 }]] },
+    "POST /webhooks/instantly/reply": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

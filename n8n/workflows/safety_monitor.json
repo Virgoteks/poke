@@ -1,0 +1,58 @@
+{
+  "name": "SAFETY MONITOR - suppression-rate circuit breaker",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "hours", "hoursInterval": 1 }] }
+      },
+      "id": "schedule-trigger",
+      "name": "Hourly",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CORE_API_BASE_URL}}/safety/evaluate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-internal-api-key", "value": "={{$env.INTERNAL_API_KEY}}" }]
+        },
+        "options": { "timeout": 30000 }
+      },
+      "id": "post-safety-evaluate",
+      "name": "POST /safety/evaluate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "leftValue": "={{$json.triggered}}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-triggered",
+      "name": "If suppression spike triggered a pause",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0]
+    }
+  ],
+  "connections": {
+    "Hourly": { "main": [[{ "node": "POST /safety/evaluate", "type": "main", "index": 0 }]] },
+    "POST /safety/evaluate": { "main": [[{ "node": "If suppression spike triggered a pause", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}
